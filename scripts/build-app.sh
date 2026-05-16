@@ -21,6 +21,7 @@ if [[ -f "$HOME/.swiftly/env.sh" ]]; then
 fi
 
 swift --version
+./scripts/check-icon.sh
 swift build -c release
 
 rm -rf "$APP_DIR"

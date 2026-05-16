@@ -11,16 +11,18 @@ if [[ -f "$HOME/.swiftly/env.sh" ]]; then
   hash -r
 fi
 
-before="$(mktemp)"
-after="$(mktemp)"
-trap 'rm -f "$before" "$after"' EXIT
-
-shasum -a 256 Resources/AppIcon.icns > "$before"
-swiftc scripts/generate-icon.swift -framework AppKit -o .build/generate-icon
-.build/generate-icon >/dev/null
-shasum -a 256 Resources/AppIcon.icns > "$after"
-
-if ! cmp -s "$before" "$after"; then
-  printf 'error: Resources/AppIcon.icns is out of date. Run scripts/check-icon.sh and commit the regenerated icon.\\n' >&2
+if [[ ! -f Resources/IconSource/foldwake-hinge-halo.png ]]; then
+  printf 'error: missing Resources/IconSource/foldwake-hinge-halo.png\\n' >&2
   exit 1
 fi
+
+swiftc scripts/generate-icon.swift -framework AppKit -o .build/generate-icon
+.build/generate-icon >/dev/null
+
+if [[ ! -f Resources/AppIcon.icns ]]; then
+  printf 'error: icon generation did not produce Resources/AppIcon.icns\\n' >&2
+  exit 1
+fi
+
+iconutil -c iconset Resources/AppIcon.icns -o .build/AppIcon.verify.iconset >/dev/null
+test -f .build/AppIcon.verify.iconset/icon_512x512@2x.png

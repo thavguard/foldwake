@@ -64,7 +64,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Development
 
-Regenerate the app icon when changing the icon source:
+Validate app icon generation after changing the icon source:
 
 ```bash
 ./scripts/check-icon.sh

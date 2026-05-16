@@ -5,7 +5,7 @@
 - Build target is Swift tools 6.3 and the project includes `.swift-version` pinned to Swift 6.3.2.
 - The app has been renamed to `Foldwake` with public bundle identifiers under `io.github.thavguard.foldwake`.
 - Pure logic has been extracted into `FoldwakeCore` and covered by unit tests.
-- The app bundle now includes `CFBundleIconFile` and `Resources/AppIcon.icns`.
+- The app bundle includes `CFBundleIconFile`; `Resources/AppIcon.icns` is generated from the tracked high-quality source PNG during packaging.
 - Build artifacts are excluded through `.gitignore`; source, docs, tests, icon, scripts, and CI config are ready to commit.
 - The checked-in static LaunchDaemon plist was removed; packaging now generates the only helper plist and includes the cdhash `SpawnConstraint`.
 - Ad-hoc signing is no longer a silent fallback. It must be explicitly enabled for non-runtime CI packaging checks.

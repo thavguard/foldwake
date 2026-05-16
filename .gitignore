@@ -4,6 +4,7 @@
 .swiftpm/
 dist/
 DerivedData/
+Resources/AppIcon.icns
 Resources/AppIcon.iconset/
 *.xcuserstate
 *.xcuserdata/
