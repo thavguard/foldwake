@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    name: Swift 6.3
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: "6.3.2"
+      - name: Show Swift version
+        run: swift --version
+      - name: Test
+        run: ./scripts/test.sh
+      - name: Check generated icon
+        run: ./scripts/check-icon.sh
+      - name: Build app bundle
+        env:
+          FOLDWAKE_SIGN_IDENTITY: "-"
+          FOLDWAKE_ALLOW_AD_HOC: "1"
+        run: ./scripts/build-app.sh
+      - name: Validate app bundle
+        run: |
+          plutil -lint dist/Foldwake.app/Contents/Info.plist
+          plutil -lint dist/Foldwake.app/Contents/Library/LaunchDaemons/io.github.thavguard.foldwake.helper.plist
+          test -f dist/Foldwake.app/Contents/Resources/AppIcon.icns
+          codesign --verify --deep --strict --verbose=2 dist/Foldwake.app
