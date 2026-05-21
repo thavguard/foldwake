@@ -1,4 +1,5 @@
 import AppKit
+import CoreGraphics
 import Foundation
 import IOKit.pwr_mgt
 import IOKit.ps
@@ -291,6 +292,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var lastDisplaySleepRequest = Date.distantPast
     private let statusItemMenu = NSMenu()
     private let statusMenuItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+    private let readinessMenuItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
     private let helperStatusItem = NSMenuItem(title: "", action: #selector(openLoginItemsSettingsFromMenu), keyEquivalent: ",")
     private let installHelperItem = NSMenuItem(title: "Install or Repair Helper...", action: #selector(enableHelperFromMenu), keyEquivalent: "i")
     private let blockSleepItem = NSMenuItem(title: "Block Mac Sleep", action: #selector(toggleTotalBlockFromMenu), keyEquivalent: "b")
@@ -336,6 +338,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func configureMenu() {
         statusMenuItem.isEnabled = false
+        readinessMenuItem.isEnabled = false
 
         blockSleepItem.target = self
         batteryGuardItem.target = self
@@ -346,6 +349,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         quitItem.target = self
 
         statusItemMenu.addItem(statusMenuItem)
+        statusItemMenu.addItem(readinessMenuItem)
         statusItemMenu.addItem(helperStatusItem)
         statusItemMenu.addItem(.separator())
         statusItemMenu.addItem(installHelperItem)
@@ -360,6 +364,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func restorePreviousState() {
         guard defaults.bool(forKey: DefaultsKey.totalBlock) else {
+            return
+        }
+
+        guard clamshellReadiness().isReady else {
+            defaults.set(false, forKey: DefaultsKey.totalBlock)
+            render()
             return
         }
 
@@ -533,6 +543,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func enableTotalBlock() {
+        let readiness = clamshellReadiness()
+        guard readiness.isReady else {
+            showClamshellRequirements(readiness)
+            return
+        }
+
         Task { @MainActor in
             do {
                 try power.enableTotalBlock()
@@ -584,7 +600,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func render() {
         let isBlocked = effectiveSleepBlockEnabled
         let snapshot = powerSnapshot()
-        statusMenuItem.title = StatusLineFormatter.menuStatus(isBlocked: isBlocked, snapshot: snapshot)
+        let readiness = clamshellReadiness(snapshot: snapshot)
+        statusMenuItem.title = StatusLineFormatter.menuStatus(
+            isBlocked: isBlocked,
+            snapshot: snapshot,
+            readiness: readiness
+        )
+        readinessMenuItem.title = "\(readiness.shortStatus) · external displays: \(readiness.externalDisplayCount)"
         helperStatusItem.title = "Helper: \(helperStatusTitle())"
         blockSleepItem.state = isBlocked ? .on : .off
         batteryGuardItem.state = defaults.bool(forKey: DefaultsKey.batteryGuard) ? .on : .off
@@ -618,8 +640,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         render()
     }
 
+    private func showClamshellRequirements(_ readiness: ClamshellReadiness) {
+        let alert = NSAlert()
+        alert.messageText = "Foldwake cannot block lid sleep yet"
+        alert.informativeText = readiness.failureMessage
+        alert.alertStyle = .informational
+        alert.runModal()
+        render()
+    }
+
     private func powerSnapshot() -> PowerSnapshot {
         PowerSnapshot(isOnAC: isOnACPower(), batteryPercent: currentBatteryPercent())
+    }
+
+    private func clamshellReadiness(snapshot: PowerSnapshot? = nil) -> ClamshellReadiness {
+        let snapshot = snapshot ?? powerSnapshot()
+        return ClamshellReadiness(
+            isOnAC: snapshot.isOnAC,
+            externalDisplayCount: externalDisplayCount()
+        )
     }
 
     private func isOnACPower() -> Bool {
@@ -649,6 +688,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         return 100
+    }
+
+    private func externalDisplayCount() -> Int {
+        var displayCount: UInt32 = 0
+        guard CGGetOnlineDisplayList(0, nil, &displayCount) == .success, displayCount > 0 else {
+            return 0
+        }
+
+        var displays = [CGDirectDisplayID](repeating: 0, count: Int(displayCount))
+        guard CGGetOnlineDisplayList(displayCount, &displays, &displayCount) == .success else {
+            return 0
+        }
+
+        return displays
+            .prefix(Int(displayCount))
+            .filter { CGDisplayIsBuiltin($0) == 0 }
+            .count
     }
 
     private func launchAgentDirectory(create: Bool) throws -> URL {

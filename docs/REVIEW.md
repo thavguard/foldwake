@@ -13,6 +13,7 @@
 ## Important Constraints
 
 - Lid-close wakefulness is not available as a normal non-privileged macOS app API, so the privileged helper is intentional.
+- Foldwake now treats closed-display readiness as a runtime requirement: it refuses to enable lid sleep blocking unless power and an external display are present.
 - The helper changes a system-wide setting. Users should have a visible menu action to restore normal sleep, and the app should keep reconciling drift from manual `pmset` changes.
 - Distribution outside local development will require a real Developer ID signing identity and notarization before most users can run it without Gatekeeper friction.
 - The helper still uses the public `NSXPCConnection.processIdentifier` surface for peer lookup. A private audit-token implementation was not added; revisit this before claiming hardened production release security.

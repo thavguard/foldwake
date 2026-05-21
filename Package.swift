@@ -21,6 +21,7 @@ let package = Package(
             ],
             linkerSettings: [
                 .linkedFramework("AppKit"),
+                .linkedFramework("CoreGraphics"),
                 .linkedFramework("IOKit"),
                 .linkedFramework("ServiceManagement")
             ]
