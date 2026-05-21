@@ -121,11 +121,22 @@ private final class HelperDelegate: NSObject, NSXPCListenerDelegate, FoldwakeHel
 
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
         let output = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
-        if process.terminationStatus == 0 {
-            reply(true, nil)
-        } else {
+        guard process.terminationStatus == 0 else {
             reply(false, output?.isEmpty == false ? output : "pmset exited with status \(process.terminationStatus)")
+            return
         }
+
+        guard let actualState = Self.systemSleepDisabled() else {
+            reply(false, "pmset updated sleep settings, but FoldwakeHelper could not read the resulting SleepDisabled state.")
+            return
+        }
+
+        guard actualState == enabled else {
+            reply(false, "pmset did not apply requested state. Expected SleepDisabled = \(enabled ? 1 : 0), got \(actualState ? 1 : 0).")
+            return
+        }
+
+        reply(true, nil)
     }
 
     private func isValidClient(connection: NSXPCConnection) -> Bool {
@@ -135,6 +146,28 @@ private final class HelperDelegate: NSObject, NSXPCListenerDelegate, FoldwakeHel
             NSLog("FoldwakeHelper code-signing validation failed: %@", "\(error)")
             return false
         }
+    }
+
+    private static func systemSleepDisabled() -> Bool? {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/pmset")
+        process.arguments = ["-g"]
+
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = Pipe()
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+        } catch {
+            return nil
+        }
+
+        guard process.terminationStatus == 0 else { return nil }
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        guard let output = String(data: data, encoding: .utf8) else { return nil }
+        return PMSetSleepStateParser.systemSleepDisabled(in: output)
     }
 }
 

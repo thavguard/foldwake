@@ -17,7 +17,7 @@ Foldwake is a native macOS menu bar app with one privileged helper.
 
 The app reconciles the expected state periodically because `pmset` can be changed outside Foldwake.
 
-Before enabling the lid-close path, the app checks the reliable public prerequisites for macOS closed-display mode: AC power and at least one external display. If either is missing, Foldwake fails closed and shows the user the missing requirement instead of setting assertions that cannot guarantee lid-close wakefulness.
+The app does not require an external display before enabling the lid-close path. The privileged helper writes `pmset -a disablesleep` and immediately reads `pmset -g`; a requested state is only accepted when the observed `SleepDisabled` value matches it.
 
 ## Security Boundaries
 

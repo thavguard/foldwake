@@ -42,24 +42,14 @@ import Testing
     ))
 }
 
-@Test func clamshellReadinessRequiresPowerAndExternalDisplay() {
-    #expect(ClamshellReadiness(isOnAC: true, externalDisplayCount: 1).isReady)
-    #expect(!ClamshellReadiness(isOnAC: false, externalDisplayCount: 1).isReady)
-    #expect(!ClamshellReadiness(isOnAC: true, externalDisplayCount: 0).isReady)
-    #expect(
-        ClamshellReadiness(isOnAC: false, externalDisplayCount: 0).blockingReasons
-            == ["power", "external display"]
-    )
-}
-
-@Test func statusLineIncludesClamshellReadiness() {
+@Test func statusLineIncludesSystemSleepState() {
     let status = StatusLineFormatter.menuStatus(
         isBlocked: false,
         snapshot: PowerSnapshot(isOnAC: true, batteryPercent: 80),
-        readiness: ClamshellReadiness(isOnAC: true, externalDisplayCount: 0)
+        systemSleepDisabled: true
     )
 
-    #expect(status == "Normal · AC 80% · Clamshell needs external display")
+    #expect(status == "Normal · AC 80% · System sleep disabled")
 }
 
 @Test func launchAgentPlistUsesAppBundleAndProductIdentifier() throws {
